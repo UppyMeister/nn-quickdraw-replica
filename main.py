@@ -50,10 +50,9 @@ def trainOneEpoch(network, training):
         targets = [0, 0, 0]
         targets[label] = 1
         network.train(inputs, targets)
-    Logger.Log("Trained for one epoch", "INFO")
 
 def testAll(network, testing):
-    Logger.Log("Beginning Testing with " + str(len(testing)) + " items.", "INFO")
+    Logger.Log("Beginning testing with " + str(len(testing)) + " items.", "INFO")
     correct = 0
     for i in range(0, len(testing)):
         data = testing[i].data
@@ -61,19 +60,22 @@ def testAll(network, testing):
         inputs = [x / 255 for x in data]
         results = network.predict(inputs)
         guess = results.index(max(results))
-        Logger.Log("RESULT: " + str(results) + "\nGUESS: " + str(guess) + ", ACTUAL: " + str(label))
+        #Logger.Log("RESULT: " + str(results) + "\nGUESS: " + str(guess) + ", ACTUAL: " + str(label))
         if (guess == label):
             correct += 1
-    Logger.Log("Testing Complete.", "INFO")
+    #Logger.Log("Testing Complete.", "INFO")
     percent_correct = (correct / len(testing)) * 100
     Logger.Log("Success Rate: " + str(percent_correct) + "%", "INFO")
 
-def startNetwork():
+def startNetwork(epochs):
     nn = NeuralNetwork(784, 64, 3)
     training = getTrainingData()
     testing = getTestingData()
-    #trainOneEpoch(nn, training)
-    testAll(nn, testing)
+    testAll(nn, testing) # Initial Test
+    for i in range(0, epochs):
+        trainOneEpoch(nn, training)
+        Logger.Log("Trained for " + str(i + 1) + " epoch" + ("s" if i > 0 else ""), "INFO")
+        testAll(nn, testing)
 
 def testNetwork():
     # Test using the XOR problem
@@ -113,7 +115,7 @@ def prepareImageData(category, rawData, label, limit):
     contentLength = int(rawData.headers['content-length'])
     if (limit == None or NUMPY_HEADER_BYTES + (limit * BYTES_PER_IMAGE) > contentLength):
         limit = int((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE)
-        Logger.Log("Image count set to max.", "INFO")
+        Logger.Log("Image count set to max (" + str((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE) + " images).", "INFO")
     #Logger.Log("Loading data...\n" + str(rawData.headers), "INFO")
     Logger.Log("Loading data...", "INFO")
     imageData = ImageDataHandler.seperateImages(rawData.read(NUMPY_HEADER_BYTES + (BYTES_PER_IMAGE * limit)))
@@ -124,12 +126,9 @@ def prepareImageData(category, rawData, label, limit):
     threshold = round(0.8 * len(completeImageData))
     category.training = completeImageData[0:threshold]
     category.testing = completeImageData[threshold:len(imageData)]
-    #ImageDataHandler.saveImage("first.png", imageData[0])
-    #ImageDataHandler.saveImage("last.png", imageData[len(imageData)-1])
-    #ImageDataHandler.saveImage("random.png", imageData[random.randint(0, len(imageData)-1)])
 
-prepareImageData(data_rainbow, rawData_rainbow, rainbow, 500)
-prepareImageData(data_anvil, rawData_anvil, anvil, 500)
-prepareImageData(data_ambulance, rawData_ambulance, ambulance, 500)
+prepareImageData(data_rainbow, rawData_rainbow, rainbow, 5000)
+prepareImageData(data_anvil, rawData_anvil, anvil, 5000)
+prepareImageData(data_ambulance, rawData_ambulance, ambulance, 5000)
 
-startNetwork()
+startNetwork(300)
