@@ -1,6 +1,7 @@
 from PIL import Image
-import Logger
 import numpy as np
+
+import Logger
 
 # Properties
 BYTES_PER_IMAGE = 784
@@ -35,7 +36,7 @@ def seperateImages(data):
         output.append(data[i:(i + BYTES_PER_IMAGE)])
         # Flip the bytes of the current image.
         output[outputIndex] = flipByte(output[outputIndex])
-        Logger.Log("Finished Processing Image #" + str(outputIndex + 1) + " (" + str(i + BYTES_PER_IMAGE) + "bytes processed)")
+        #Logger.Log("Finished Processing Image #" + str(outputIndex + 1) + " (" + str(i + BYTES_PER_IMAGE) + "bytes processed)")
     return output
 
 def saveImage(name, data):
