@@ -1,5 +1,5 @@
-from NeuralNetwork import NeuralNetwork
 from tkinter import *
+from NeuralNetwork import NeuralNetwork
 
 gui = Tk()
 gui.geometry("280x280")

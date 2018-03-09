@@ -27,25 +27,32 @@ ReLU = ActivationFunction(
     lambda y: 1 * (y > 0))
 
 class NeuralNetwork:
-    def __init__(self, input_nodes, hidden_nodes, output_nodes):
-        self.input_nodes = input_nodes
-        self.hidden_nodes = hidden_nodes
-        self.output_nodes = output_nodes
+    def __init__(self, a = 0, b = 0, c = 0):
+        if (isinstance(a, dict)):
+            for key in a:
+                print(key)
+                setattr(self, key, a[key])
 
-        # Weights between input nodes and hidden nodes
-        self.weights_ih = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, self.input_nodes))
-        
-        # Weights between hidden nodes and output nodes
-        self.weights_ho = np.random.uniform(low=-1, high=1, size=(self.output_nodes, self.hidden_nodes))
+            self.setActivationFunction()
+        else:
+            self.input_nodes = a
+            self.hidden_nodes = b
+            self.output_nodes = c
 
-        # Biasses
-        self.bias_h = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, 1))
-        self.bias_o = np.random.uniform(low=-1, high=1, size=(self.output_nodes, 1))
-        
-        self.setLearningRate()
-        self.setActivationFunction()
+            # Weights between input nodes and hidden nodes
+            self.weights_ih = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, self.input_nodes))
+            
+            # Weights between hidden nodes and output nodes
+            self.weights_ho = np.random.uniform(low=-1, high=1, size=(self.output_nodes, self.hidden_nodes))
 
-    def setActivationFunction(self, func = tanh):
+            # Biasses
+            self.bias_h = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, 1))
+            self.bias_o = np.random.uniform(low=-1, high=1, size=(self.output_nodes, 1))
+            
+            self.setLearningRate()
+            self.setActivationFunction()
+
+    def setActivationFunction(self, func = sigmoid):
         self.activation_function = func
 
     def setLearningRate(self, learning_rate = 0.001):

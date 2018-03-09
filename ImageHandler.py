@@ -1,7 +1,7 @@
+import glob
 from PIL import Image
-import numpy as np
-
 import Logger
+from ImageData import ImageData
 
 # Properties
 BYTES_PER_IMAGE = 784
@@ -11,6 +11,16 @@ def getData(file):
     # Read bytes from file.
     f = open(file, 'rb')
     return f.read()
+
+def createImagesFor(customTestingDataFileLocations, label):
+    images = []
+    for filename in customTestingDataFileLocations:
+        im = Image.open(filename).resize((28, 28)).convert("1")
+        images.append(ImageData(im.getdata(), label))
+    return images
+
+def getFilesFromDirectory(directory):
+    return glob.glob(directory + "/*")
 
 # Flip byte from 255 -> 0, 0 -> 255, e.t.c
 def flipByte(imageData):

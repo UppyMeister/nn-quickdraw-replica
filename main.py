@@ -1,9 +1,10 @@
+import json
 import random
 import urllib.request
-
 import Logger
-import ImageData
-import ImageDataHandler
+import ImageHandler
+from ImageData import ImageData
+from NeuralEncoder import NeuralEncoder
 from NeuralNetwork import NeuralNetwork
 
 # Properties
@@ -67,15 +68,28 @@ def testAll(network, testing):
     percent_correct = (correct / len(testing)) * 100
     Logger.Log("Success Rate: " + str(percent_correct) + "%", "INFO")
 
-def startNetwork(epochs):
-    nn = NeuralNetwork(784, 64, 3)
+def mainNetwork(network, epochs):
     training = getTrainingData()
     testing = getTestingData()
-    testAll(nn, testing) # Initial Test
+    testAll(network, testing) # Initial Test
     for i in range(0, epochs):
-        trainOneEpoch(nn, training)
+        trainOneEpoch(network, training)
         Logger.Log("Trained for " + str(i + 1) + " epoch" + ("s" if i > 0 else ""), "INFO")
-        testAll(nn, testing)
+        Logger.Log("Saving Network", "INFO")
+        encoded = json.dumps(network.__dict__, separators=(',',': '), sort_keys=True, indent=4, cls=NeuralEncoder)
+        with open("main.json", "w") as f:
+            f.write(encoded)
+            f.close()
+        
+        testAll(network, testing)
+
+def startNetwork(epochs):
+    nn = NeuralNetwork(784, 64, 3)
+    mainNetwork(nn, epochs)
+
+def loadNetwork(json, epochs):
+    nn = NeuralNetwork(json)
+    mainNetwork(nn, epochs)
 
 def testNetwork():
     # Test using the XOR problem
@@ -108,7 +122,7 @@ def testNetwork():
     print(nn.predict([0, 0]))
     print(nn.predict([1, 1]))
 
-def prepareImageData(category, rawData, label, limit):
+def prepareImageData(category, rawData, label, customTestingFiles, limit):
     # No longer required, as the numpy file can be read directly from the site
     # into the seperateImages, as long as the 80 header bytes are accounted for.
     #npybin.convertImagesToBinary("data/npy/" + imageCategory + ".npy", count)
@@ -118,17 +132,34 @@ def prepareImageData(category, rawData, label, limit):
         Logger.Log("Image count set to max (" + str((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE) + " images).", "INFO")
     #Logger.Log("Loading data...\n" + str(rawData.headers), "INFO")
     Logger.Log("Loading data...", "INFO")
-    imageData = ImageDataHandler.seperateImages(rawData.read(NUMPY_HEADER_BYTES + (BYTES_PER_IMAGE * limit)))
+    imageData = ImageHandler.seperateImages(rawData.read(NUMPY_HEADER_BYTES + (BYTES_PER_IMAGE * limit)))
     Logger.Log("Finished loading data.", "INFO")
     completeImageData = []
     for x in range(0, len(imageData)):
-        completeImageData.append(ImageData.ImageData(imageData[x], label))
+        completeImageData.append(ImageData(imageData[x], label))
     threshold = round(0.8 * len(completeImageData))
     category.training = completeImageData[0:threshold]
     category.testing = completeImageData[threshold:len(imageData)]
+    category.custom_testing = customTestingFiles
 
-prepareImageData(data_rainbow, rawData_rainbow, rainbow, 5000)
-prepareImageData(data_anvil, rawData_anvil, anvil, 5000)
-prepareImageData(data_ambulance, rawData_ambulance, ambulance, 5000)
+# Custom Testing Data
+custom_testing_rainbow = ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/rainbow"), rainbow)
+custom_testing_anvil = ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/anvil"), anvil)
+custom_testing_ambulance = ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/ambulance"), ambulance)
 
-startNetwork(300)
+prepareImageData(data_rainbow, rawData_rainbow, rainbow, custom_testing_rainbow, 20000)
+prepareImageData(data_anvil, rawData_anvil, anvil, custom_testing_anvil, 20000)
+prepareImageData(data_ambulance, rawData_ambulance, ambulance, custom_testing_ambulance, 20000)
+
+def main():
+    choice = input("Neural Network\n[1] New Network\n[2] Load Network\n> ")
+    if (choice == "1"):
+        startNetwork(300)
+    elif (choice == "2"):
+        with open("main.json", "r") as f:
+            data = f.read()
+        loadNetwork(json.loads(data), 300)
+    else:
+        print("Invalid choice")
+        main()
+main()
