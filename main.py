@@ -1,5 +1,6 @@
 import json
 import random
+import os.path
 import urllib.request
 import Logger
 import ImageHandler
@@ -7,89 +8,94 @@ from ImageData import ImageData
 from NeuralEncoder import NeuralEncoder
 from NeuralNetwork import NeuralNetwork
 
+categories = [{"category": "aircraft carrier", "limit": None},
+              {"category": "airplane", "limit": None},
+              {"category": "alarm clock", "limit": None},
+              {"category": "ambulance", "limit": None},
+              {"category": "angel", "limit": None},
+              {"category": "ant", "limit": None},
+              {"category": "anvil", "limit": None},
+              {"category": "apple", "limit": None},
+              {"category": "axe", "limit": None},
+              {"category": "banana", "limit": None},
+              {"category": "baseball bat", "limit": None},
+              {"category": "bicycle", "limit": None},
+              {"category": "cat", "limit": None}]
+
+data_objects = [lambda: None for x in categories]
+
 # Properties
 BYTES_PER_IMAGE = 784
 NUMPY_HEADER_BYTES = 80
 
-# Objects
-data_rainbow = lambda: None
-data_anvil = lambda: None
-data_ambulance = lambda: None
-
-# Raw Data
-rawData_rainbow = urllib.request.urlopen("https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap/rainbow.npy")
-rawData_anvil = urllib.request.urlopen("https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap/anvil.npy")
-rawData_ambulance = urllib.request.urlopen("https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap/ambulance.npy")
-
-# Labels
-rainbow = 0
-anvil = 1
-ambulance = 2
+def calculateHiddenLayerNodeCount():
+    # formula = nsamples / (alpha * (ninputs + noutputs))
+    samples = 0
+    for x in data_objects:
+        samples += len(x.testing)
+    return int(samples / (3 * (BYTES_PER_IMAGE + len(categories))))
 
 def getTrainingData():
     training = []
-    training.extend(data_rainbow.training)
-    training.extend(data_anvil.training)
-    training.extend(data_ambulance.training)
+    for x in data_objects:
+        training.extend(x.training)
     random.shuffle(training)
     return training
 
 def getTestingData():
     testing = []
-    testing.extend(data_rainbow.testing)
-    testing.extend(data_anvil.testing)
-    testing.extend(data_ambulance.testing)
+    for x in data_objects:
+        testing.extend(x.testing)
     random.shuffle(testing)
     return testing
 
 def trainOneEpoch(network, training):
     Logger.Log("Beginning training with " + str(len(training)) + " items.", "INFO")
-    for i in range(0, len(training)):
-        data = training[i].data
+    for i in training:
+        data = i.data
         inputs = [x / 255 for x in data]
-        label = training[i].label
-        targets = [0, 0, 0]
-        targets[label] = 1
+        targets = [0] * len(categories)
+        targets[i.label] = 1
         network.train(inputs, targets)
 
 def testAll(network, testing):
     Logger.Log("Beginning testing with " + str(len(testing)) + " items.", "INFO")
     correct = 0
-    for i in range(0, len(testing)):
+    for i in range(len(testing)):
         data = testing[i].data
-        label = testing[i].label
         inputs = [x / 255 for x in data]
         results = network.predict(inputs)
         guess = results.index(max(results))
         #Logger.Log("RESULT: " + str(results) + "\nGUESS: " + str(guess) + ", ACTUAL: " + str(label))
-        if (guess == label):
+        if (guess == testing[i].label):
             correct += 1
     #Logger.Log("Testing Complete.", "INFO")
     percent_correct = (correct / len(testing)) * 100
-    Logger.Log("Success Rate: " + str(percent_correct) + "%", "INFO")
+    Logger.Log("Success Rate: " + str(round(percent_correct, 2)) + "%", "INFO")
 
-def mainNetwork(network, epochs):
+def mainNetwork(network, info):
     training = getTrainingData()
     testing = getTestingData()
     testAll(network, testing) # Initial Test
-    for i in range(0, epochs):
+    for i in range(0, info["epochs"]):
         trainOneEpoch(network, training)
         Logger.Log("Trained for " + str(i + 1) + " epoch" + ("s" if i > 0 else ""), "INFO")
         Logger.Log("Saving Network", "INFO")
-        encoded = json.dumps(network.__dict__, separators=(',',': '), sort_keys=True, indent=4, cls=NeuralEncoder)
-        with open("main.json", "w") as f:
+        encoded = json.dumps([{"info": info}, {"network": network.__dict__}], separators=(',',': '), sort_keys=True, indent=4, cls=NeuralEncoder)
+        with open(info["name"] + ".json", "w") as f:
             f.write(encoded)
             f.close()
         
         testAll(network, testing)
 
-def startNetwork(epochs):
-    nn = NeuralNetwork(784, 64, 3)
-    mainNetwork(nn, epochs)
+def startNetwork(name, epochs):
+    nn = NeuralNetwork(BYTES_PER_IMAGE, calculateHiddenLayerNodeCount(), len(categories))
+    info = {"name": name, "epochs": epochs}
+    mainNetwork(nn, info)
 
-def loadNetwork(json, epochs):
-    nn = NeuralNetwork(json)
-    mainNetwork(nn, epochs)
+def loadNetwork(json):
+    nn = NeuralNetwork(json["network"])
+    mainNetwork(nn, json["info"])
 
 def testNetwork():
     # Test using the XOR problem
@@ -126,39 +132,63 @@ def prepareImageData(category, rawData, label, customTestingFiles, limit):
     # No longer required, as the numpy file can be read directly from the site
     # into the seperateImages, as long as the 80 header bytes are accounted for.
     #npybin.convertImagesToBinary("data/npy/" + imageCategory + ".npy", count)
+    Logger.Log("Loading data for \"" + category.category + "\"", "INFO")
+    
     contentLength = int(rawData.headers['content-length'])
     if (limit == None or NUMPY_HEADER_BYTES + (limit * BYTES_PER_IMAGE) > contentLength):
         limit = int((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE)
-        Logger.Log("Image count set to max (" + str((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE) + " images).", "INFO")
-    #Logger.Log("Loading data...\n" + str(rawData.headers), "INFO")
-    Logger.Log("Loading data...", "INFO")
-    imageData = ImageHandler.seperateImages(rawData.read(NUMPY_HEADER_BYTES + (BYTES_PER_IMAGE * limit)))
+        Logger.Log("Image count set to max (" + str(int((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE)) + " images).", "INFO")
+
+    try:
+        imageData = ImageHandler.seperateImages(rawData.read(NUMPY_HEADER_BYTES + (BYTES_PER_IMAGE * limit)))
+    except Exception as e:
+        Logger.Log("Error loading data: " + str(e))
+    
     Logger.Log("Finished loading data.", "INFO")
-    completeImageData = []
-    for x in range(0, len(imageData)):
-        completeImageData.append(ImageData(imageData[x], label))
+    
+    completeImageData = [ImageData(x, label) for x in imageData]
     threshold = round(0.8 * len(completeImageData))
     category.training = completeImageData[0:threshold]
     category.testing = completeImageData[threshold:len(imageData)]
     category.custom_testing = customTestingFiles
 
-# Custom Testing Data
-custom_testing_rainbow = ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/rainbow"), rainbow)
-custom_testing_anvil = ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/anvil"), anvil)
-custom_testing_ambulance = ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/ambulance"), ambulance)
+def loadData():
+    for i in range(len(categories)):
+        url = "https://storage.googleapis.com/quickdraw_dataset/full/numpy_bitmap/" + categories[i]["category"].replace(" ", "%20") + ".npy"
+        try:
+            d = urllib.request.urlopen(url)
+        except Exception as e:
+                Logger.Log("Failed to load info from url (" + url + "): " + str(e))
+                print(categories[i]["category"] + " does not exist")
+                continue
 
-prepareImageData(data_rainbow, rawData_rainbow, rainbow, custom_testing_rainbow, 20000)
-prepareImageData(data_anvil, rawData_anvil, anvil, custom_testing_anvil, 20000)
-prepareImageData(data_ambulance, rawData_ambulance, ambulance, custom_testing_ambulance, 20000)
+        data_objects[i].category = categories[i]["category"]
+        prepareImageData(data_objects[i],
+                         d,
+                         i,
+                         ImageHandler.createImagesFor(ImageHandler.getFilesFromDirectory("custom_testing_data/" + categories[i]["category"]), i),
+                         categories[i]["limit"])
 
 def main():
-    choice = input("Neural Network\n[1] New Network\n[2] Load Network\n> ")
+    loadData()
+    choice = input("Neural Network\n[1] New Network\n[2] Load Network\n=> ")
     if (choice == "1"):
-        startNetwork(300)
+        name = input("Network Name\n=> ")
+        epochs = input("Epochs\n=> ")
+        if (epochs.isdigit()):
+            startNetwork(name, int(epochs))
+        else:
+            print("Epochs must be a number")
+            main()
     elif (choice == "2"):
-        with open("main.json", "r") as f:
-            data = f.read()
-        loadNetwork(json.loads(data), 300)
+        name = input("Network to load\n=> ")
+        if (os.path.isfile(name + ".json")):
+            with open("main.json", "r") as f:
+                data = f.read()
+                loadNetwork(json.loads(data))
+        else:
+            print("No network called: " + name)
+            main()
     else:
         print("Invalid choice")
         main()

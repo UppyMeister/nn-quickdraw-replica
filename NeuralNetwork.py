@@ -8,11 +8,11 @@ class ActivationFunction:
         self.dactivation = dactivation
 
 def softmax(x):
-    e = np.exp(x - numpy.max(x))  # prevent overflow
+    e = np.exp(x - numpy.max(x))
     if e.ndim == 1:
         return e / np.sum(e, axis=0)
     else:  
-        return e / np.array([np.sum(e, axis=1)]).T  # ndim = 2
+        return e / np.array([np.sum(e, axis=1)]).T
 
 sigmoid = ActivationFunction(
     lambda x: 1 / (1 + math.exp(-x)),
@@ -31,7 +31,8 @@ class NeuralNetwork:
         if (isinstance(a, dict)):
             for key in a:
                 print(key)
-                setattr(self, key, a[key])
+                if (key != None):
+                    setattr(self, key, a[key])
 
             self.setActivationFunction()
         else:
@@ -40,14 +41,14 @@ class NeuralNetwork:
             self.output_nodes = c
 
             # Weights between input nodes and hidden nodes
-            self.weights_ih = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, self.input_nodes))
+            self.weights_ih = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, self.input_nodes)).tolist()
             
             # Weights between hidden nodes and output nodes
-            self.weights_ho = np.random.uniform(low=-1, high=1, size=(self.output_nodes, self.hidden_nodes))
+            self.weights_ho = np.random.uniform(low=-1, high=1, size=(self.output_nodes, self.hidden_nodes)).tolist()
 
             # Biasses
-            self.bias_h = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, 1))
-            self.bias_o = np.random.uniform(low=-1, high=1, size=(self.output_nodes, 1))
+            self.bias_h = np.random.uniform(low=-1, high=1, size=(self.hidden_nodes, 1)).tolist()
+            self.bias_o = np.random.uniform(low=-1, high=1, size=(self.output_nodes, 1)).tolist()
             
             self.setLearningRate()
             self.setActivationFunction()
