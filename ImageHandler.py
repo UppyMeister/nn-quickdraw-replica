@@ -1,10 +1,12 @@
 import glob
 from PIL import Image
-import Logger
+from Logger import Logger
 from ImageData import ImageData
 
 # Properties
 BYTES_PER_IMAGE = 784
+
+Logger = Logger(LogLevel.INFO)
 
 # If loading from local file.
 def getData(file):
@@ -46,7 +48,7 @@ def seperateImages(data):
         output.append(data[i:(i + BYTES_PER_IMAGE)])
         # Flip the bytes of the current image.
         output[outputIndex] = flipByte(output[outputIndex])
-        #Logger.Log("Finished Processing Image #" + str(outputIndex + 1) + " (" + str(i + BYTES_PER_IMAGE) + "bytes processed)")
+        #Logger.Log("Finished Processing Image #" + str(outputIndex + 1) + " (" + str(i + BYTES_PER_IMAGE) + "bytes processed)", LogLevel.INFO)
     return output
 
 def saveImage(name, data):

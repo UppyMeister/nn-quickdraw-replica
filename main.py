@@ -2,8 +2,9 @@ import json
 import random
 import os.path
 import urllib.request
-import Logger
 import ImageHandler
+from Logger import Logger
+from LogLevel import LogLevel
 from ImageData import ImageData
 from NeuralEncoder import NeuralEncoder
 from NeuralNetwork import NeuralNetwork
@@ -28,6 +29,8 @@ data_objects = [lambda: None for x in categories]
 BYTES_PER_IMAGE = 784
 NUMPY_HEADER_BYTES = 80
 
+Logger = Logger(LogLevel.INFO)
+
 def calculateHiddenLayerNodeCount():
     # formula = nsamples / (alpha * (ninputs + noutputs))
     samples = 0
@@ -50,7 +53,7 @@ def getTestingData():
     return testing
 
 def trainOneEpoch(network, training):
-    Logger.Log("Beginning training with " + str(len(training)) + " items.", "INFO")
+    Logger.Log("Beginning training with " + str(len(training)) + " items.", LogLevel.INFO)
     for i in training:
         data = i.data
         inputs = [x / 255 for x in data]
@@ -59,7 +62,7 @@ def trainOneEpoch(network, training):
         network.train(inputs, targets)
 
 def testAll(network, testing):
-    Logger.Log("Beginning testing with " + str(len(testing)) + " items.", "INFO")
+    Logger.Log("Beginning testing with " + str(len(testing)) + " items.", LogLevel.INFO)
     correct = 0
     for i in range(len(testing)):
         data = testing[i].data
@@ -69,9 +72,9 @@ def testAll(network, testing):
         #Logger.Log("RESULT: " + str(results) + "\nGUESS: " + str(guess) + ", ACTUAL: " + str(label))
         if (guess == testing[i].label):
             correct += 1
-    #Logger.Log("Testing Complete.", "INFO")
+    #Logger.Log("Testing Complete.", LogLevel.INFO)
     percent_correct = (correct / len(testing)) * 100
-    Logger.Log("Success Rate: " + str(round(percent_correct, 2)) + "%", "INFO")
+    Logger.Log("Success Rate: " + str(round(percent_correct, 2)) + "%", LogLevel.INFO)
 
 def mainNetwork(network, info):
     training = getTrainingData()
@@ -79,8 +82,8 @@ def mainNetwork(network, info):
     testAll(network, testing) # Initial Test
     for i in range(0, info["epochs"]):
         trainOneEpoch(network, training)
-        Logger.Log("Trained for " + str(i + 1) + " epoch" + ("s" if i > 0 else ""), "INFO")
-        Logger.Log("Saving Network", "INFO")
+        Logger.Log("Trained for " + str(i + 1) + " epoch" + ("s" if i > 0 else ""), LogLevel.INFO)
+        Logger.Log("Saving Network", LogLevel.INFO)
         encoded = json.dumps([{"info": info}, {"network": network.__dict__}], separators=(',',': '), sort_keys=True, indent=4, cls=NeuralEncoder)
         with open(info["name"] + ".json", "w") as f:
             f.write(encoded)
@@ -132,19 +135,19 @@ def prepareImageData(category, rawData, label, customTestingFiles, limit):
     # No longer required, as the numpy file can be read directly from the site
     # into the seperateImages, as long as the 80 header bytes are accounted for.
     #npybin.convertImagesToBinary("data/npy/" + imageCategory + ".npy", count)
-    Logger.Log("Loading data for \"" + category.category + "\"", "INFO")
+    Logger.Log("Loading data for \"" + category.category + "\"", LogLevel.INFO)
     
     contentLength = int(rawData.headers['content-length'])
     if (limit == None or NUMPY_HEADER_BYTES + (limit * BYTES_PER_IMAGE) > contentLength):
         limit = int((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE)
-        Logger.Log("Image count set to max (" + str(int((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE)) + " images).", "INFO")
+        Logger.Log("Image count set to max (" + str(int((contentLength - NUMPY_HEADER_BYTES) / BYTES_PER_IMAGE)) + " images).", LogLevel.INFO)
 
     try:
         imageData = ImageHandler.seperateImages(rawData.read(NUMPY_HEADER_BYTES + (BYTES_PER_IMAGE * limit)))
     except Exception as e:
         Logger.Log("Error loading data: " + str(e))
     
-    Logger.Log("Finished loading data.", "INFO")
+    Logger.Log("Finished loading data.", LogLevel.INFO)
     
     completeImageData = [ImageData(x, label) for x in imageData]
     threshold = round(0.8 * len(completeImageData))
