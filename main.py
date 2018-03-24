@@ -9,19 +9,19 @@ from ImageData import ImageData
 from NeuralEncoder import NeuralEncoder
 from NeuralNetwork import NeuralNetwork
 
-categories = [{"category": "aircraft carrier", "limit": None},
-              {"category": "airplane", "limit": None},
-              {"category": "alarm clock", "limit": None},
-              {"category": "ambulance", "limit": None},
-              {"category": "angel", "limit": None},
-              {"category": "ant", "limit": None},
-              {"category": "anvil", "limit": None},
-              {"category": "apple", "limit": None},
-              {"category": "axe", "limit": None},
-              {"category": "banana", "limit": None},
-              {"category": "baseball bat", "limit": None},
-              {"category": "bicycle", "limit": None},
-              {"category": "cat", "limit": None}]
+categories = [{"category": "aircraft carrier", "limit": 1000},
+              {"category": "airplane", "limit": 1000},
+              {"category": "alarm clock", "limit": 1000},
+              {"category": "ambulance", "limit": 1000},
+              {"category": "angel", "limit": 1000},
+              {"category": "ant", "limit": 1000},
+              {"category": "anvil", "limit": 1000},
+              {"category": "apple", "limit": 1000},
+              {"category": "axe", "limit": 1000},
+              {"category": "banana", "limit": 1000},
+              {"category": "baseball bat", "limit": 1000},
+              {"category": "bicycle", "limit": 1000},
+              {"category": "cat", "limit": 1000}]
 
 data_objects = [lambda: None for x in categories]
 
@@ -84,7 +84,7 @@ def mainNetwork(network, info):
         trainOneEpoch(network, training)
         Logger.Log("Trained for " + str(i + 1) + " epoch" + ("s" if i > 0 else ""), LogLevel.INFO)
         Logger.Log("Saving Network", LogLevel.INFO)
-        encoded = json.dumps([{"info": info}, {"network": network.__dict__}], separators=(',',': '), sort_keys=True, indent=4, cls=NeuralEncoder)
+        encoded = json.dumps([{"info": info, "network": network.__dict__}], separators=(',',': '), sort_keys=True, indent=4, cls=NeuralEncoder)
         with open(info["name"] + ".json", "w") as f:
             f.write(encoded)
             f.close()
@@ -188,6 +188,7 @@ def main():
         if (os.path.isfile(name + ".json")):
             with open("main.json", "r") as f:
                 data = f.read()
+                print(json.loads(data))
                 loadNetwork(json.loads(data))
         else:
             print("No network called: " + name)

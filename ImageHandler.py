@@ -1,6 +1,7 @@
 import glob
 from PIL import Image
 from Logger import Logger
+from LogLevel import LogLevel
 from ImageData import ImageData
 
 # Properties
